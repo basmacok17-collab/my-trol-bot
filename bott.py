@@ -6,7 +6,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, ContextTypes, CallbackQueryHandler, MessageHandler, filters
 
 # Безопасно берем токен из настроек хостинга FadeHost
-TOKEN = os.getenv("TOKEN")
+TOKEN = os.getenv("8916760362:AAHf9caFm-LB2npmZMTzeIe5-OWIj2dsy24")
 
 tasks = {}
 last_activity = {}
