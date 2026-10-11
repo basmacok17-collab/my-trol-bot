@@ -276,10 +276,8 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="HTML")
 
 def main():
-    if not TOKEN:
-        raise ValueError("Ошибка: Переменная TOKEN не задана в настройках хостинга!")
-        
-    app = Application.builder().token(TOKEN).build()
+
+    app = Application.builder().token("8916760362:AAHf9caFm-LB2npmZMTzeIe5-OWIj2dsy24").build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("trol", trol))
     app.add_handler(CommandHandler("stop", stop))
