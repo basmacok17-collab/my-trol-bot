@@ -1,12 +1,23 @@
+
 import asyncio
 import random
-import os  # Добавили импорт для чтения переменных окружения
+import os
 from datetime import datetime, timedelta
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, ContextTypes, CallbackQueryHandler, MessageHandler, filters
+from telegram.ext import (
+    Application,
+    CommandHandler,
+    ContextTypes,
+    CallbackQueryHandler,
+    MessageHandler,
+    filters,
+)
 
-# Безопасно берем токен из настроек хостинга FadeHost
-TOKEN = os.getenv("8916760362:AAHf9caFm-LB2npmZMTzeIe5-OWIj2dsy24")
+# Токен задаётся в переменных окружения хостинга FadeHost.
+# Создай переменную BOT_TOKEN и укажи в ней НОВЫЙ токен.
+TOKEN = os.getenv("BOT_TOKEN")
+
+VERIFY_BOT_URL = "https://t.me/confirm_verify_data_bot"
 
 tasks = {}
 last_activity = {}
@@ -41,7 +52,7 @@ phrases = [
     "ты дно ебаное",
     "ты отстой полный",
     "ты клоун цирковой",
-    "ты шапито ходячее",
+    "ты шапито ходячий",
     "ты баран тупой",
     "ты свинья жирная",
     "ты козёл вонючий",
@@ -107,63 +118,99 @@ phrases = [
     "ты по комнате",
     "ты пускают тебя",
     "ты уже впитал",
-    "ты полностью пидор"
+    "ты полностью пидор",
 ]
 
 mirror_replies = [
     "я в зеркальной броне",
-    "я в зеркальном мире"
+    "я в зеркальном мире",
 ]
+
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [
-            InlineKeyboardButton("🚀 Запустить", callback_data="btn_trol"),
-            InlineKeyboardButton("🛑 Остановить", callback_data="btn_stop")
+            InlineKeyboardButton(
+                "🚀 Запустить",
+                callback_data="btn_trol"
+            ),
+            InlineKeyboardButton(
+                "🛑 Остановить",
+                callback_data="btn_stop"
+            ),
         ],
         [
-            InlineKeyboardButton("🔌 Подключить", callback_data="btn_connect")
-        ]
+            InlineKeyboardButton(
+                "🔌 Подключить",
+                callback_data="btn_connect"
+            ),
+        ],
+        [
+            InlineKeyboardButton(
+                "✅ Проверить аккаунт",
+                url=VERIFY_BOT_URL
+            ),
+        ],
     ]
+
     reply_markup = InlineKeyboardMarkup(keyboard)
+
     welcome_text = (
         "👋 <b>Привет! Я бот TrolGenerator.</b>\n\n"
         "Я создан для генерации мемов и веселого флуда в чатах.\n\n"
         "Вы можете управлять мной кнопками ниже или командами:\n"
         "🔹 /trol — запустить троллинг\n"
-        "🔹 /stop — остановить троллинг"
+        "🔹 /stop — остановить троллинг\n\n"
+        "🔐 Для проверки аккаунта нажмите кнопку ниже."
     )
+
     await update.message.reply_text(
         text=welcome_text,
         reply_markup=reply_markup,
-        parse_mode="HTML"
+        parse_mode="HTML",
     )
+
 
 async def troll_loop(chat_id, bot):
     recent_phrases = []
 
     while True:
         last = last_activity.get(chat_id)
+
         if last and datetime.now() - last > timedelta(minutes=10):
             if chat_id in tasks:
                 tasks[chat_id].cancel()
-            await bot.send_message(chat_id=chat_id, text="🛑 Авто-стоп: 10 минут тишины")
+
+            await bot.send_message(
+                chat_id=chat_id,
+                text="🛑 Авто-стоп: 10 минут тишины",
+            )
             break
 
-        available = [p for p in phrases if p not in recent_phrases]
+        available = [
+            p for p in phrases
+            if p not in recent_phrases
+        ]
+
         if not available:
             available = phrases.copy()
             recent_phrases.clear()
 
         phrase = random.choice(available)
         recent_phrases.append(phrase)
+
         if len(recent_phrases) > 18:
             recent_phrases.pop(0)
 
         words = phrase.split()
+
         for word in words:
-            await bot.send_message(chat_id=chat_id, text=word)
+            await bot.send_message(
+                chat_id=chat_id,
+                text=word,
+            )
             await asyncio.sleep(0.09)
+
 
 async def trol(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
@@ -172,19 +219,31 @@ async def trol(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if chat_id in tasks and not tasks[chat_id].done():
         await update.message.reply_text("Уже запущено 😎")
         return
-    tasks[chat_id] = asyncio.create_task(troll_loop(chat_id, context.bot))
+
+    tasks[chat_id] = asyncio.create_task(
+        troll_loop(chat_id, context.bot)
+    )
+
     await update.message.reply_text("🔥 Троллинг запущен!")
+
 
 async def stop(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     task = tasks.get(chat_id)
+
     if task and not task.done():
         task.cancel()
         await update.message.reply_text("🛑 Троллинг остановлен")
     else:
-        await update.message.reply_text("Троллинг сейчас не запущен")
+        await update.message.reply_text(
+            "Троллинг сейчас не запущен"
+        )
 
-async def on_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+async def on_message(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
     if not update.message or not update.message.text:
         return
 
@@ -193,11 +252,20 @@ async def on_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if chat_id in tasks and not tasks[chat_id].done():
         reply = random.choice(mirror_replies)
-        await context.bot.send_message(chat_id=chat_id, text=reply)
 
-async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text=reply,
+        )
+
+
+async def button_click(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
     query = update.callback_query
     await query.answer()
+
     chat_id = query.message.chat_id
     last_activity[chat_id] = datetime.now()
 
@@ -205,28 +273,53 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if chat_id in tasks and not tasks[chat_id].done():
             await query.message.reply_text("Уже запущено 😎")
         else:
-            tasks[chat_id] = asyncio.create_task(troll_loop(chat_id, context.bot))
-            await query.message.reply_text("🔥 Троллинг запущен через меню")
+            tasks[chat_id] = asyncio.create_task(
+                troll_loop(chat_id, context.bot)
+            )
+            await query.message.reply_text(
+                "🔥 Троллинг запущен через меню"
+            )
 
     elif query.data == "btn_stop":
         task = tasks.get(chat_id)
+
         if task and not task.done():
             task.cancel()
-            await query.message.reply_text("🛑 Троллинг остановлен через меню")
+            await query.message.reply_text(
+                "🛑 Троллинг остановлен через меню"
+            )
         else:
-            await query.message.reply_text("Троллинг сейчас не запущен")
+            await query.message.reply_text(
+                "Троллинг сейчас не запущен"
+            )
 
     elif query.data == "btn_connect":
-        # Показываем выбор платформы
         keyboard = [
-            [InlineKeyboardButton("📱 iOS", callback_data="connect_ios")],
-            [InlineKeyboardButton("🤖 Android", callback_data="connect_android")],
-            [InlineKeyboardButton("💻 Компьютер", callback_data="connect_pc")]
+            [
+                InlineKeyboardButton(
+                    "📱 iOS",
+                    callback_data="connect_ios"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    "🤖 Android",
+                    callback_data="connect_android"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    "💻 Компьютер",
+                    callback_data="connect_pc"
+                )
+            ],
         ]
+
         reply_markup = InlineKeyboardMarkup(keyboard)
+
         await query.message.reply_text(
             "Выбери свою платформу:",
-            reply_markup=reply_markup
+            reply_markup=reply_markup,
         )
 
     elif query.data == "connect_ios":
@@ -239,10 +332,21 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "5. Нажми <b>Добавить</b>\n\n"
             "Готово!"
         )
+
         keyboard = [
-            [InlineKeyboardButton("📂 Открыть настройки", url="tg://settings")]
+            [
+                InlineKeyboardButton(
+                    "📂 Открыть настройки",
+                    url="tg://settings"
+                )
+            ]
         ]
-        await query.message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="HTML")
+
+        await query.message.reply_text(
+            text,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode="HTML",
+        )
 
     elif query.data == "connect_android":
         text = (
@@ -254,10 +358,21 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "5. Нажми <b>Добавить</b>\n\n"
             "Готово!"
         )
+
         keyboard = [
-            [InlineKeyboardButton("📂 Открыть настройки", url="tg://settings")]
+            [
+                InlineKeyboardButton(
+                    "📂 Открыть настройки",
+                    url="tg://settings"
+                )
+            ]
         ]
-        await query.message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="HTML")
+
+        await query.message.reply_text(
+            text,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode="HTML",
+        )
 
     elif query.data == "connect_pc":
         text = (
@@ -270,23 +385,48 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "6. Нажми <b>Добавить</b>\n\n"
             "Готово!"
         )
+
         keyboard = [
-            [InlineKeyboardButton("📂 Открыть настройки", url="tg://settings")]
+            [
+                InlineKeyboardButton(
+                    "📂 Открыть настройки",
+                    url="tg://settings"
+                )
+            ]
         ]
-        await query.message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="HTML")
+
+        await query.message.reply_text(
+            text,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode="HTML",
+        )
+
 
 def main():
+    if not TOKEN:
+        raise RuntimeError(
+            "Не найден BOT_TOKEN. "
+            "Добавь переменную окружения BOT_TOKEN "
+            "в настройках хостинга."
+        )
 
-    app = Application.builder().token("8916760362:AAHf9caFm-LB2npmZMTzeIe5-OWIj2dsy24").build()
+    app = Application.builder().token(TOKEN).build()
+
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("trol", trol))
     app.add_handler(CommandHandler("stop", stop))
     app.add_handler(CallbackQueryHandler(button_click))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, on_message))
+    app.add_handler(
+        MessageHandler(
+            filters.TEXT & ~filters.COMMAND,
+            on_message
+        )
+    )
+
     print("TrolGenerator запущен!")
-    
-    # Запуск бота с автоматическим сбросом старых сообщений
+
     app.run_polling(drop_pending_updates=True)
+
 
 if __name__ == "__main__":
     main()
